@@ -51,15 +51,15 @@ import { FilesActionButtons } from './fileactions';
 const FILE_BROWSER_FACTORY = 'FileBrowser';
 
 /**
- * The file browser plugin id.
- */
-const FILE_BROWSER_PLUGIN_ID = '@jupyterlab/filebrowser-extension:browser';
-
-/**
  * The namespace for command IDs.
  */
 namespace CommandIDs {
-  // The command to activate the filebrowser widget in tree view.
+  // The command to show the filebrowser widget in tree view.
+  export const openDirectory = 'filebrowser:open-directory';
+
+  /**
+   * @deprecated Use `filebrowser:open-directory` instead.
+   */
   export const activate = 'filebrowser:activate';
 
   // Activate the file filter in the file browser
@@ -170,58 +170,6 @@ const fileActions: JupyterFrontEndPlugin<void> = {
 };
 
 /**
- * A plugin to set the default file browser settings.
- */
-const fileBrowserSettings: JupyterFrontEndPlugin<void> = {
-  id: '@jupyter-notebook/tree-extension:settings',
-  description: 'Set up the default file browser settings',
-  requires: [IDefaultFileBrowser],
-  optional: [ISettingRegistry],
-  autoStart: true,
-  activate: (
-    app: JupyterFrontEnd,
-    browser: IDefaultFileBrowser,
-    settingRegistry: ISettingRegistry | null
-  ) => {
-    // Default config for notebook.
-    // This is a different set of defaults than JupyterLab.
-    const defaultFileBrowserConfig = {
-      navigateToCurrentDirectory: false,
-      singleClickNavigation: true,
-      showLastModifiedColumn: true,
-      showFileSizeColumn: true,
-      showHiddenFiles: false,
-      showFileCheckboxes: true,
-      sortNotebooksFirst: true,
-      showFullPath: false,
-    };
-
-    // Apply defaults on plugin activation
-    let key: keyof typeof defaultFileBrowserConfig;
-    for (key in defaultFileBrowserConfig) {
-      browser[key] = defaultFileBrowserConfig[key];
-    }
-
-    if (settingRegistry) {
-      void settingRegistry.load(FILE_BROWSER_PLUGIN_ID).then((settings) => {
-        function onSettingsChanged(settings: ISettingRegistry.ISettings): void {
-          let key: keyof typeof defaultFileBrowserConfig;
-          for (key in defaultFileBrowserConfig) {
-            const value = settings.get(key).user as boolean;
-            // only set the setting if it is defined by the user
-            if (value !== undefined) {
-              browser[key] = value;
-            }
-          }
-        }
-        settings.changed.connect(onSettingsChanged);
-        onSettingsChanged(settings);
-      });
-    }
-  },
-};
-
-/**
  * A plugin to add the file filter toggle command to the palette
  */
 const fileFilterCommand: JupyterFrontEndPlugin<void> = {
@@ -314,10 +262,21 @@ const openFileBrowser: JupyterFrontEndPlugin<void> = {
     browser: IDefaultFileBrowser
   ) => {
     const { commands } = app;
-    commands.addCommand(CommandIDs.activate, {
+    commands.addCommand(CommandIDs.openDirectory, {
       execute: () => {
         notebookTree.currentWidget = browser;
       },
+      describedBy: {
+        args: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    });
+
+    // Backward-compatible alias for older command ID.
+    commands.addCommand(CommandIDs.activate, {
+      execute: (args) => commands.execute(CommandIDs.openDirectory, args),
       describedBy: {
         args: {
           type: 'object',
@@ -443,7 +402,6 @@ const notebookTreeWidget: JupyterFrontEndPlugin<INotebookTree> = {
 const plugins: JupyterFrontEndPlugin<any>[] = [
   createNew,
   fileActions,
-  fileBrowserSettings,
   fileFilterCommand,
   loadPlugins,
   openFileBrowser,
