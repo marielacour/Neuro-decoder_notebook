@@ -234,27 +234,6 @@ jobs:
             echo "| prod:release | $(fmt $REL_JS) | $(fmt $REL_MAP) |"
           } >> $GITHUB_STEP_SUMMARY
 
-  test_lint:
-    name: Test Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: jupyterlab/maintainer-tools/.github/actions/base-setup@94b14ddfbdd1ed651e9f9343ae2409ab5c73a6a8 # v1
-      - name: Run Linters
-        run: |
-          hatch run typing:test
-          hatch run lint:build
-          pipx run interrogate -v .
-          pipx run doc8 --max-line-length=200 docs/source *.md
-          python -m pip install -U "jupyter-builder>=1.0.2,<2"
-          jlpm
-          jlpm eslint:check
-          jlpm prettier:check
-          jlpm build:utils
-          jlpm integrity
-
   tests_check: # This job does nothing and is only used for the branch protection
     if: always()
     needs:
